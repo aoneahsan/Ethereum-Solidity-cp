@@ -47,6 +47,5 @@ fs.writeFileSync(
     encoding: 'utf8'
   }
 )
-
 // if you want to compile and get result run time use the below
 // module.exports = contractByteCode
