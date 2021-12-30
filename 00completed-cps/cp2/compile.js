@@ -2,7 +2,7 @@ const path = require('path')
 const fs = require('fs')
 const solc = require('solc')
 
-const contractName = 'Campaign'
+const contractName = 'Lottery'
 const contractFileName = `${contractName}.sol`
 const contractFilePath = path.join(__dirname, 'contracts', contractFileName)
 
