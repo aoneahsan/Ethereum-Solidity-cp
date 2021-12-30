@@ -1,10 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.16 <0.9.0;
 
-contract Lottery {
+contract CompaignFactor {
+    Compaign[] public deployedContracts;
+    address[] public deployedContractsAddress;
+
+    function createCompaign(uint minCompaignContribution) public {
+        Compaign deployedContract = new Compaign(minCompaignContribution, msg.sender);
+        address deployedContractAddress = address(deployedContract);
+
+        deployedContracts.push(deployedContract);
+        deployedContractsAddress.push(deployedContractAddress);
+    }
+
+    function getDeployedContracts() public view returns (Compaign[] memory) {
+        return deployedContracts;
+    }
+
+    function getDeployedContractsAddress() public view returns (address[] memory) {
+        return deployedContractsAddress;
+    }
+}
+
+contract Compaign {
     struct Request {
         string description;
-        uint256 value;
+        uint value;
         address payable recipient;
         bool complete;
         // new after cgaing approvers to a mapping
@@ -13,7 +34,7 @@ contract Lottery {
     }
 
     address public manager;
-    uint256 public minimumContribution;
+    uint public minimumContribution;
     // address[] public approvers; // before moving to mapping
     mapping(address => bool) public approvers;
     uint numRequests;
@@ -25,8 +46,8 @@ contract Lottery {
         _;
     }
 
-    constructor(uint256 minimum) {
-        manager = msg.sender;
+    constructor(uint minimum, address creator) {
+        manager = creator;
         minimumContribution = minimum;
     }
 
@@ -40,7 +61,7 @@ contract Lottery {
 
     function createRequest(
         string calldata description,
-        uint256 value,
+        uint value,
         address payable recipient
     ) public restricted {
         Request storage newRequest = requests[numRequests++];
