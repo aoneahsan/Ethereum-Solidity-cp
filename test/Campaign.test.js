@@ -1,150 +1,104 @@
 const assert = require('assert')
 const ganache = require('ganache-cli')
+const { request } = require('http')
 const Web3Class = require('web3')
+const { abi: CompaignABI } = require('./../compiled-output/Compaign.json')
 const {
-  abi,
+  abi: CompaignFactorABI,
   evm: {
-    bytecode: { object: bytecode }
+    bytecode: { object: CompaignFactorBytecode }
   }
-} = require('./../compiled-output/output.json')
+} = require('./../compiled-output/CompaignFactor.json')
 const web3ObjInstance = new Web3Class(ganache.provider())
 
-let accounts, deployedContractRes, deployedContractAddress
+let accounts, factory, compaign, compaignAddress, factoryAddress
 // beforeEach to get available accounts before each it statement
 beforeEach(async () => {
   accounts = await web3ObjInstance.eth.getAccounts()
 
-  deployedContractRes = await new web3ObjInstance.eth.Contract(abi)
+  factory = await new web3ObjInstance.eth.Contract(CompaignFactorABI)
     .deploy({
-      data: bytecode
+      data: CompaignFactorBytecode
     })
     .send({ from: accounts[0], gas: '1000000' })
-  deployedContractAddress = deployedContractRes.options.address
+  factoryAddress = factory.options.address
+  await factory.methods.createCompaign('100').send({
+    from: accounts[0],
+    gas: '1000000'
+  })
+  ;[compaignAddress] = await factory.methods.getDeployedContracts().call()
+  compaign = await new web3ObjInstance.eth.Contract(
+    CompaignABI,
+    compaignAddress
+  )
 })
 
 // create a test group
-describe('Campaign Contract Tests', () => {
+describe('Campaign & CompaignFactor Contract Tests', () => {
   // it test for deploying the contract
   it('deploy the contract', () => {
-    assert.ok(deployedContractAddress)
+    assert.ok(factoryAddress)
+    assert.ok(compaignAddress)
   })
 
-  // allow one account to enter
-  it('allow one account to enter', async () => {
+  // marks caller as compaign manager
+  it('marks caller as compaign manager', async () => {
     try {
-      await deployedContractRes.methods.enter().send({
-        from: accounts[0],
-        value: web3ObjInstance.utils.toWei('0.02', 'ether')
-      })
-
-      const players = await deployedContractRes.methods.getPlayers().call()
-
-      assert.ok(players[0])
-      assert.equal(players[0], accounts[0])
+      const m = await compaign.methods.manager().call()
+      assert.equal(m, accounts[0])
     } catch (error) {
       console.error(error)
       assert(false, 'From Catch block check test code.')
     }
   })
 
-  // allow multiple accounts to enter
-  it('allow multiple accounts to enter', async () => {
+  // allow people to contribute money and mark as approvers
+  it('allow people to contribute money and mark as approvers', async () => {
     try {
-      await deployedContractRes.methods.enter().send({
-        from: accounts[0],
-        value: web3ObjInstance.utils.toWei('0.02', 'ether')
-      })
-      await deployedContractRes.methods.enter().send({
+      await compaign.methods.contribute().send({
         from: accounts[1],
-        value: web3ObjInstance.utils.toWei('0.02', 'ether')
+        value: '200'
       })
-      await deployedContractRes.methods.enter().send({
-        from: accounts[2],
-        value: web3ObjInstance.utils.toWei('0.02', 'ether')
-      })
-
-      const players = await deployedContractRes.methods.getPlayers().call()
-
-      assert.ok(players[0])
-      assert.equal(players[0], accounts[0])
-      assert.ok(players[1])
-      assert.equal(players[1], accounts[1])
-      assert.ok(players[2])
-      assert.equal(players[2], accounts[2])
+      const isContrubutor = await compaign.methods.approvers(accounts[1]).call()
+      assert(isContrubutor)
     } catch (error) {
       console.error(error)
       assert(false, 'From Catch block check test code.')
     }
   })
 
-  // requires a minimum account to enter (> .01 ether)
-  it('requires a minimum account to enter (> .01 ether)', async () => {
+  // need minimum account to contribute
+  it('need minimum account to contribute', async () => {
     try {
-      await deployedContractRes.methods.enter().send({
-        from: accounts[0],
-        value: web3ObjInstance.utils.toWei('0.01', 'ether')
+      await compaign.methods.contribute().send({
+        from: accounts[1],
+        value: '2'
       })
-
-      const players = await deployedContractRes.methods.getPlayers().call()
-
-      assert.ok(players[0])
-      assert.equal(players[0], accounts[0])
-    } catch (error) {
-      // console.error(error)
-      assert(error, 'Error if try to enter with less than .01 ether.')
-    }
-  })
-
-  // only manager can call pickwiner
-  it('only manager can call pickwiner', async () => {
-    try {
-      await deployedContractRes.methods.pickWinner().send({
-        from: accounts[1]
-      })
-      assert(false, 'was able to call pickWinner from a non-manager account.')
+      assert(false)
     } catch (error) {
       assert(error)
     }
   })
 
-  // send money to winner on pickWinner call
-  it('send money to winner on pickWinner call', async () => {
+  // allow compaign manager to make payment request
+  it('allow compaign manager to make payment request', async () => {
     try {
-      let players = await deployedContractRes.methods.getPlayers().call()
-      assert.ok(players.length === 0)
-
-      let lotteryBalance = await web3ObjInstance.eth.getBalance(
-        deployedContractAddress
-      )
-      assert.equal(lotteryBalance, 0)
-
-      await deployedContractRes.methods.enter().send({
-        from: accounts[0],
-        value: web3ObjInstance.utils.toWei('1', 'ether')
-      })
-
-      lotteryBalance = await web3ObjInstance.eth.getBalance(
-        deployedContractAddress
-      )
-      assert.ok(lotteryBalance > 0)
-
-      players = null
-      players = await deployedContractRes.methods.getPlayers().call()
-      assert.ok(players.length >= 1)
-
-      assert.ok(players[0])
-      assert.equal(players[0], accounts[0])
-
-      await deployedContractRes.methods.pickWinner().send({
-        from: accounts[0]
-      })
-
-      lotteryBalance = await web3ObjInstance.eth.getBalance(
-        deployedContractAddress
-      )
-      assert.ok(lotteryBalance == 0)
+      const description = 'payment request'
+      const value = '10000'
+      await compaign.methods
+        .createRequest(description, value, accounts[2])
+        .send({
+          from: accounts[0],
+          gas: '1000000'
+        })
+      requestIndex = await compaign.methods.numRequests().call()
+      request = await compaign.methods.requests(requestIndex).call()
+      console.log({ requestIndex, request })
+      assert.equal(request.description, description)
+      assert.equal(request.value, value)
+      assert.equal(request.recipient, accounts[2])
+      assert(!request.complete)
     } catch (error) {
-      console.error(error)
       assert(false, 'From Catch block check test code.')
     }
   })

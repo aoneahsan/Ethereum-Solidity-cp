@@ -3,22 +3,15 @@ pragma solidity >=0.4.16 <0.9.0;
 
 contract CompaignFactor {
     Compaign[] public deployedContracts;
-    address[] public deployedContractsAddress;
 
     function createCompaign(uint minCompaignContribution) public {
         Compaign deployedContract = new Compaign(minCompaignContribution, msg.sender);
-        address deployedContractAddress = address(deployedContract);
 
         deployedContracts.push(deployedContract);
-        deployedContractsAddress.push(deployedContractAddress);
     }
 
     function getDeployedContracts() public view returns (Compaign[] memory) {
         return deployedContracts;
-    }
-
-    function getDeployedContractsAddress() public view returns (address[] memory) {
-        return deployedContractsAddress;
     }
 }
 
@@ -37,9 +30,9 @@ contract Compaign {
     uint public minimumContribution;
     // address[] public approvers; // before moving to mapping
     mapping(address => bool) public approvers;
-    uint numRequests;
-    mapping(uint => Request) requests;
-    uint compaignApproversCount;
+    uint public numRequests;
+    mapping(uint => Request) public requests;
+    uint public compaignApproversCount;
 
     modifier restricted() {
         require(msg.sender == manager);

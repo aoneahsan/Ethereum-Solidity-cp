@@ -1,5 +1,5 @@
 const path = require('path')
-const fs = require('fs')
+const fs = require('fs-extra')
 const solc = require('solc')
 
 const contractName = 'Campaign'
@@ -24,28 +24,16 @@ var input = {
   }
 }
 
-var output = JSON.parse(solc.compile(JSON.stringify(input)))
-// `output` here contains the JSON output as specified in the documentation
-// for (const innerContractName in output.contracts[contractFileName]) {
-//   console.log(
-//     innerContractName +
-//       ': ' +
-//       output.contracts[contractFileName][innerContractName].evm.bytecode.object
-//   )
-// }
+var output = JSON.parse(solc.compile(JSON.stringify(input))).contracts[contractFileName]
 
-// const contractByteCode =
-//   output.contracts[contractFileName][contractName].evm.bytecode.object
-
-const contractByteCode = output.contracts[contractFileName][contractName]
-
-// if you want to compile and save the result and use saved results use the below
-fs.writeFileSync(
-  path.join(__dirname, 'compiled-output', 'output.json'),
-  JSON.stringify(contractByteCode),
-  {
-    encoding: 'utf8'
+for (const contract in output) {
+  if (Object.hasOwnProperty.call(output, contract)) {
+    fs.writeJSONSync(
+      path.resolve(
+        __dirname,
+        `./compiled-output/${contract}.json`
+      ),
+      output[contract]
+    )
   }
-)
-// if you want to compile and get result run time use the below
-// module.exports = contractByteCode
+}

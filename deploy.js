@@ -1,12 +1,9 @@
 const HDWalletProvider = require('@truffle/hdwallet-provider')
 const Web3Class = require('web3')
-const {
-  abi: interface,
-  evm: {
-    bytecode: { object: bytecode }
-  }
-} = require('./compiled-output/output.json')
-const { storeInFile } = require('./utils/lib')
+const path = require('path')
+const fs = require('fs-extra')
+const CompaignCompiledContract = require('./compiled-output/Compaign.json')
+const CompaignFactorCompiledContract = require('./compiled-output/CompaignFactor.json')
 const { mnemonic, rinkebyInfuraUrl } = require('./.keys')
 
 const providerOptions = new HDWalletProvider({
@@ -18,37 +15,41 @@ const web3ObjInstance = new Web3Class(providerOptions)
 
 const deployContract = async () => {
   try {
-    const accounts = await web3ObjInstance.eth.getAccounts()
-    const result = await new web3ObjInstance.eth.Contract(interface)
-      .deploy({
-        data: bytecode
-      })
-      .send({ gas: '10000000', from: accounts[0] })
-    const contractAddress = result.options.address
-    console.log('interface S...')
-    console.log(interface)
-    console.log('interface E...')
-    const dataToStore = {
-      deployedContractResult: JSON.stringify(result),
-      compiledContractData: JSON.stringify({
-        interface,
-        bytecode
-      }),
-      contractAddress
-    }
-
-    console.log({ dataToStore })
-
-    storeInFile(dataToStore, res => {
-      if (res) {
-        console.log(
-          'Contract Deployed Successfully, Address: ',
-          contractAddress
-        )
-      } else {
-        console.error('Error Occured while deploying contract.')
+    // const contracts = [CompaignCompiledContract, CompaignFactorCompiledContract]
+    const contracts = [CompaignFactorCompiledContract] // we don't need to deploy the compaign contract as we will use factory contract to later deploy compaigns
+    for (let i = 0; i < contracts.length; i++) {
+      const { abi: interface, evm: { bytecode } } = contracts[i]
+      const accounts = await web3ObjInstance.eth.getAccounts()
+      const result = await new web3ObjInstance.eth.Contract(interface)
+        .deploy({
+          data: bytecode
+        })
+        .send({ gas: '10000000', from: accounts[0] })
+      const contractAddress = result.options.address
+      console.log('interface S...', i)
+      console.log(interface)
+      console.log('interface E...', i)
+      const dataToStore = {
+        deployedContractResult: JSON.stringify(result),
+        compiledContractData: JSON.stringify({
+          interface,
+          bytecode
+        }),
+        contractAddress
       }
-    })
+
+      console.log('contractAddress S...', i)
+      console.log({ contractAddress })
+      console.log('contractAddress E...', i)
+
+      fs.writeJSONSync(
+        path.resolve(
+          __dirname,
+          `./deployed-contracts/deployment-output-${new Date().toLocaleDateString()}.json`
+        ),
+        dataToStore
+      )
+    }
   } catch (error) {
     console.error('Error in deploy.js Start----')
     console.log(error)
