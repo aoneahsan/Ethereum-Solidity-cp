@@ -18,7 +18,12 @@ const deployContract = async () => {
     // const contracts = [CompaignCompiledContract, CompaignFactorCompiledContract]
     const contracts = [CompaignFactorCompiledContract] // we don't need to deploy the compaign contract as we will use factory contract to later deploy compaigns
     for (let i = 0; i < contracts.length; i++) {
-      const { abi: interface, evm: { bytecode } } = contracts[i]
+      const {
+        abi: interface,
+        evm: {
+          bytecode: { object: bytecode }
+        }
+      } = contracts[i]
       const accounts = await web3ObjInstance.eth.getAccounts()
       const result = await new web3ObjInstance.eth.Contract(interface)
         .deploy({
@@ -29,18 +34,15 @@ const deployContract = async () => {
       console.log('interface S...', i)
       console.log(interface)
       console.log('interface E...', i)
-      const dataToStore = {
-        deployedContractResult: JSON.stringify(result),
-        compiledContractData: JSON.stringify({
-          interface,
-          bytecode
-        }),
-        contractAddress
-      }
 
       console.log('contractAddress S...', i)
       console.log({ contractAddress })
       console.log('contractAddress E...', i)
+      const dataToStore = {
+        interface,
+        bytecode,
+        contractAddress
+      }
 
       fs.writeJSONSync(
         path.resolve(
