@@ -10,3 +10,6 @@
 {
   contractAddress 31-12-2021 (2): '0xa2d6B973317c3fFBF80b6842fb27f7d0aF162aae'
 }
+{
+  contractAddress: '0x98F55E52bF1d2Ee8A86B52608104e4689d039234' // deployed on 02-01-2022, with new getSummary and other functions
+}

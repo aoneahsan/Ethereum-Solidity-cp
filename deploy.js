@@ -49,7 +49,7 @@ const deployContract = async () => {
     fs.outputJSONSync(
       path.resolve(
         __dirname,
-        `./deployed-contracts/deployment-output-${new Date().toISOString()}.json`
+        `./deployed-contracts/deployment-output-1.json`
       ),
       dataToStore
     )
